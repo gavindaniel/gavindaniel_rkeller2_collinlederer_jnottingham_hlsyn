@@ -22,7 +22,10 @@ void EndToEndTester::RunTests(){
 
 
 /*
- * @requirement pass if all lines in files are the exact same (strcmp returns 0) AND output files can be opened properly
+ * @requirement pass if all lines in files are the exact same AND output files can be opened properly
+ *
+ * @note test_files should be traversed from 1 to 10
+ *
  * @return pass: 1, fail: 0
  */
 bool EndToEndTester::testFile(int testNum){
