@@ -42,7 +42,7 @@ bool EndToEndTester::testFile(int testNum){
     Chars chars(testWordsPath.str(), testCardsPath.str(), myOutputFilePath.str());
     chars.ReadCardsFromFile();
     chars.ReadWordsFromFile();
-    chars.ProcessCards();
+//    chars.ProcessCards();
     chars.WriteCardsToFile();
 
     ifstream myOutputFile(myOutputFilePath.str());
