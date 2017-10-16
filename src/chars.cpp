@@ -106,7 +106,7 @@ void Chars::ReadWordsFromFile() {
 void Chars::ProcessCards() {
 //    bool foundWord;
     for(list<Card>::iterator card = _cards.begin(); card != _cards.end(); card++){
-        foundWord = false;
+//        foundWord = false;
         for(list<Word>::iterator word = _words.begin(); word != _words.end(); word++){
             if(word->GetContent().length() == card->GetBlankLength()){
 //                card->ReplaceBlanks(*word);
