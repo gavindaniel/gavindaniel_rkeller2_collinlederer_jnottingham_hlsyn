@@ -104,7 +104,7 @@ void Chars::ReadWordsFromFile() {
  *
  */
 void Chars::ProcessCards() {
-    bool foundWord;
+//    bool foundWord;
     for(list<Card>::iterator card = _cards.begin(); card != _cards.end(); card++){
         foundWord = false;
         for(list<Word>::iterator word = _words.begin(); word != _words.end(); word++){
