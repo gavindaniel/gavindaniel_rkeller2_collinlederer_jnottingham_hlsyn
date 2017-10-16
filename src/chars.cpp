@@ -109,15 +109,15 @@ void Chars::ProcessCards() {
         foundWord = false;
         for(list<Word>::iterator word = _words.begin(); word != _words.end(); word++){
             if(word->GetContent().length() == card->GetBlankLength()){
-                card->ReplaceBlanks(*word);
+//                card->ReplaceBlanks(*word);
 //                _words.erase(word);
-                foundWord = true;
-                break;
+//                foundWord = true;
+//                break;
             }
         }
-        if(!foundWord){
+//        if(!foundWord){
 //            _cards.erase(card);
-        }
+//        }
     }
 }
 
