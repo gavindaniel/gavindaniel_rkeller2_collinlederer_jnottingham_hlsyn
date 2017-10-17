@@ -2,7 +2,7 @@ Course Name: ece275 <br>
 Author: <br>
 NetID: <br>
 Date: <br>
-Project Name: project_6
+Project Name: project_7
 
 # Description:
 The popular game Cards Against Humanity is a horrible game, for horrible people. 
