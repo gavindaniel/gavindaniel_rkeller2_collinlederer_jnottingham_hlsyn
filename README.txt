@@ -1,6 +1,6 @@
 # 1) Authors: Gavin Daniel, Jason Nottingham, Robert Keller, Collin Lederer
 #    NetIDs: gavindaniel_rkeller2_collinlederer_jnottingham
-#    Project: hlysn
+#    Project: hlsyn
 
 # 2) ECE 474A (574A for Jason)
 #

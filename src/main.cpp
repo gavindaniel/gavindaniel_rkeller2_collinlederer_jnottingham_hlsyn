@@ -16,7 +16,7 @@ using namespace std;
 int main(int argc, char* argv[]) {
     
     if (argc != 3) {
-        cout << "Usage: dpgen netlistFile verilogFile" << endl;
+        cout << "Usage: hlsyn cFile latency verilogFile" << endl;
         return 1;
     }
     else {
