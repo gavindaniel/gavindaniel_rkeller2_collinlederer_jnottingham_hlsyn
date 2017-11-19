@@ -1,7 +1,7 @@
-# Author: Roman Lysecky
-# NetID: rlysecky
-# Date: 06 January 2016
-# Project Number: 
+# Author: Gavin Daniel
+# NetID: gavindaniel
+# Date: 25 October 2017
+# Project: hlsyn
 
 # This file is an exception to the Code of Academic Integrity, and may be reused without
 # the need to request permission for future assignments **as long as all edits are made by
@@ -9,7 +9,7 @@
 # any other student; sharing it in any way is a violation of the Code of Academic Integrity.
 
 # A simple example CMake Setup for Compiling C Programs. This setup utilizes a single
-# subdirectory (src) in which all C source (.c) and header (.h) files within that 
+# subdirectory (src) in which all C source (.c) and header (.h) files within that
 # directory are included within the project.
 
 # CMake projects are forward compatible, but may not be backwards compatible. This
@@ -17,9 +17,9 @@
 
 cmake_minimum_required(VERSION 3.1)
 
-# Define the project name. 
+# Define the project name.
 
-project (chars_project)
+project (hlsyn_project)
 
 # Add a subdirectory to the project. The CMakeLists.txt file in that subdirectory
 # will be used for further setting up the project.

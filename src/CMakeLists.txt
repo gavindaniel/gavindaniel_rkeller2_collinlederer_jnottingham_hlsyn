@@ -1,7 +1,7 @@
-# Author: Roman Lysecky
-# NetID: rlysecky
-# Date: 06 January 2016
-# Project Number: 
+# Author: Gavin Daniel
+# NetID: gavindaniel
+# Date: 25 October 2017
+# Project: hlysn
 
 # This file is an exception to the Code of Academic Integrity, and may be reused without
 # the need to request permission for future assignments **as long as all edits are made by
@@ -23,7 +23,7 @@ endif()
 
 # The following file GLOB command will search for all files within the current directory
 # that match the specified expressions (*.c and *.h), and assign the resulting files
-# to the variable SRCS. Thus, SRCS is a list a all C source and header files in the 
+# to the variable SRCS. Thus, SRCS is a list a all C source and header files in the
 # current directory.
 
 file( GLOB SRCS *.cpp *.h )
@@ -31,6 +31,6 @@ file( GLOB SRCS *.cpp *.h )
 # Define the target application executable (named echoer) and the list of C source
 # and header files needed for the executable.
 
-add_executable( chars ${SRCS} )
+add_executable( hlysn ${SRCS} )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
