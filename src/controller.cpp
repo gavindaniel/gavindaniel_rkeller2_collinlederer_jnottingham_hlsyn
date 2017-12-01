@@ -23,15 +23,11 @@ Controller::Controller(string inputFilePath, string outputFilePath){
     _inputFilePath = inputFilePath;
     _outputFilePath = outputFilePath;
     
-    Node Clk = Node("input Int1 Clk, Rst, Start", "Clk", 1, "input", true);
-    Node Rst = Node("input Int1 Clk, Rst, Start", "Rst", 1, "input", true);
-    Node Start = Node("input Int1 Clk, Rst, Start", "Start", 1, "input", true);
-    Node Done = Node("output Int1 Done", "Done", 1, "output", true);
+    Node Clk = Node("input Int1 Clk, Rst", "Clk", 1, "input", true);
+    Node Rst = Node("input Int1 Clk, Rst", "Rst", 1, "input", true);
     _variables.push_back(Clk);
     _variables.push_back(Rst);
-    _variables.push_back(Start);
-    _variables.push_back(Done);
-    _modCount = vector<int>(14,0);
+    
 }
 /*
  * Description: Getters
@@ -45,8 +41,6 @@ vector<string> Controller::getVerilogLines() {
 vector<Node> Controller::getVariables() {
     return _variables;
 }
-vector<int> Controller::getModCount() {   return _modCount;   }
-void Controller::setModCount(vector<int> c) {   _modCount = c;  }
 
 /*
  * Description: Read Cards from a File
@@ -238,7 +232,7 @@ string Controller::writeModule() {
     moduleDef = "`timescale 1ns / 1ps\n\n";
     
     circuitName = circuitName.substr(0,circuitName.find(".txt"));
-    moduleDef += "module HLSM (";
+    moduleDef += "module " + circuitName + "(";
     
     for (unsigned int i = 0; i < _variables.size(); i++){
         if (i == 0) {
@@ -320,9 +314,9 @@ void Controller::writeToFile() {
     outputFile << writeModule() << "\r\n";
     outputFile << writeVariables() << "\r\n";
     
-//    for(string line : _verilogLines){
-//        outputFile << "\t" << line << "\r\n";
-//    }
+    for(string line : _verilogLines){
+        outputFile << "\t" << line << "\r\n";
+    }
     outputFile << "endmodule";
     
     outputFile.close();
@@ -334,7 +328,7 @@ void Controller::writeToFile() {
 bool Controller::convertOperations() {
     string verilog;
     for (Operation op : _operations) {
-        verilog = op.convertOperation(_modCount);
+        verilog = op.convertOperation();
         if (verilog != "ERROR") {
             _verilogLines.push_back(verilog);
         }
@@ -352,6 +346,14 @@ void Controller::getCriticalPath()
 {
     Circuit circuit;
     circuit.getCriticalPath(_operations);
+}
+
+
+bool Controller::PerformScheduling(int latency)
+{
+	Circuit circuit;
+	bool ret = circuit.ForceDirectedScheduling(_operations, latency);
+	return ret;
 }
 
 

@@ -16,7 +16,7 @@ using namespace std;
 int main(int argc, char* argv[]) {
     
     if (argc != 3) {
-        cout << "Usage: hlsyn cFile latency verilogFile" << endl;
+        cout << "Usage: dpgen netlistFile verilogFile" << endl;
         return 1;
     }
     else {
@@ -26,12 +26,16 @@ int main(int argc, char* argv[]) {
         
         inputPath << argv[1];
         outputPath << argv[2];
+
+		int latency = 10;
         
         Controller controller(inputPath.str(), outputPath.str());
         
         success = controller.readFromFile();
         if (success) {  success = controller.convertOperations(); controller.getCriticalPath(); }
         if (success) {  controller.writeToFile();   }
+
+		controller.PerformScheduling(latency);
         
         return 0;
     }

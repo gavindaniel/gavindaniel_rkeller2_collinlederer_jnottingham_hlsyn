@@ -15,7 +15,7 @@ Node::Node(){
     _name = "";
     _bitWidth = 0;
     _varType = "";
-    _signed = true;
+	_signed = true;
 }
 
 Node::Node(string netlist, string name, int bitWidth, string varType, bool s){

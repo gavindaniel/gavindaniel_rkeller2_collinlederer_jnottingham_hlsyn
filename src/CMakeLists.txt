@@ -1,7 +1,7 @@
 # Author: Gavin Daniel
 # NetID: gavindaniel
 # Date: 25 October 2017
-# Project: hlysn
+# Project: dpgen
 
 # This file is an exception to the Code of Academic Integrity, and may be reused without
 # the need to request permission for future assignments **as long as all edits are made by
@@ -31,6 +31,6 @@ file( GLOB SRCS *.cpp *.h )
 # Define the target application executable (named echoer) and the list of C source
 # and header files needed for the executable.
 
-add_executable( hlsyn ${SRCS} )
+add_executable( dpgen ${SRCS} )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

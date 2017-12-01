@@ -21,9 +21,10 @@ private:
     Node _b;
     Node _c;
     string _operator;
-
+	
     
 public:
+
     Operation();
     Node getResult();
     Node get_varA();
@@ -35,7 +36,7 @@ public:
     void set_varB(Node b);
     void set_varC(Node c);
     void setOperator(string op);
-    string convertOperation(vector<int>& vCount);
+    string convertOperation();
     string checkSign(Node var);
 };
 #endif

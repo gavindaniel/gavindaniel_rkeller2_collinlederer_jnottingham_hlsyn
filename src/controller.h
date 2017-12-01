@@ -24,15 +24,12 @@ private:
     vector<string> _verilogLines;
     vector<Node> _variables;
     vector<Operation> _operations;
-    vector<int> _modCount;
 public:
     Controller(string inputFilePath, string outputFilePath);
     
     vector<Operation> getOperations();
     vector<Node> getVariables();
     vector<string> getVerilogLines();
-    vector<int> getModCount();
-    void setModCount(vector<int> c);
     
     bool readFromFile();
     bool convertOperations();
@@ -45,6 +42,7 @@ public:
     Operation parseOperation(string netlistCode);
     Node findVariable(string varName);
     void getCriticalPath();
+	bool PerformScheduling(int latency);
 };
 
 

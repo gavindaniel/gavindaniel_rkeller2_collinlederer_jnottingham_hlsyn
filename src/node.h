@@ -21,6 +21,7 @@ private:
     int _bitWidth;
     string _varType;
     bool _signed;
+	int _latency;
     
     
     
@@ -34,6 +35,7 @@ public:
     string getVariableName();
     string getVariableType();
     int getBitWidth();
+	int getLatency();
     bool getSigned();
     bool checkOperation(string netlistCode);
     string checkType(string netlistCode);
