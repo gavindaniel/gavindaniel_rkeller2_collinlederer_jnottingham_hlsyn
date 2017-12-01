@@ -7,13 +7,14 @@
 
 
 #include <fstream>
-#include <iostream>
+//#include <iostream>
 #include <algorithm>
 #include "circuit.h"
 #include "controller.h"
 #include "input.h"
 #include "node.h"
 #include "operation.h"
+#include <iomanip>
 
 using namespace std;
 
@@ -35,23 +36,183 @@ Circuit::Circuit() {
 
 bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency)
 {
-
+	//Finds child and parent nodes for each node
 	getChildNodes(_operations);
 	getParentNodes(_operations);
 
+	//Sorts each node into multiply, divide/modulo, adder/subtractor, logic elements
+	SortNodes(_operations, latency);
+
+	//Finds ASAP schedule
+	getASAP(_operations, latency);
+
+	//Finds ALAP schedule
+	getALAP(_operations, latency);
+
+	//Finds time interval and Width
+	getTimeInterval(_operations, latency);
+
+	//Calculates probability matrix and probability sums for each time
+	getProbablityMatrix( _operations, latency);
+
+	//Calculate self force
+	getSelfForce(_operations, latency);
+	return true;
+
+}
+
+void Circuit::getSelfForce(vector<Operation> _operations, int latency)
+{
+
+	SelfForce = new double[numOperations*latency];
+
+	for (int ii = 0; ii < numOperations*latency; ii++) SelfForce[ii] = 0;
+#ifdef DEBUG_MODE
+	cout << endl <<"Node\tLatency\tloop\tSum" << endl;
+#endif
+	for (int yy = 0; yy < numOperations; yy++)
+	{
+		for (int xx = Op_Interval[yy * 2]; xx < Op_Interval[yy * 2 + 1] + 1; xx++)
+		{
+			if (_operations[yy].getOperator() == "*")
+			{
+
+				double sum = 0;
+				for (int zz = Op_Interval[yy * 2]; zz < Op_Interval[yy * 2+1] + 1; zz++) 
+				{
+
+					if (zz == xx)
+						sum += ProbMultSum[xx] * (1 - ProbMult[yy*latency + xx]);
+					
+					else 
+						sum += ProbMultSum[zz] * (0 - ProbMult[yy*latency + zz]);
+
+#ifdef DEBUG_MODE
+					cout << yy << "\t" << xx << "\t" << zz << "\t" << sum << endl;
+#endif
+				}
+
+				SelfForce[yy*latency + xx] = sum;
+
+			}
+			else if (_operations[yy].getOperator() == "/" || _operations[yy].getOperator() == "%") {
+
+				double sum = 0;
+				for (int zz = Op_Interval[yy * 2]; zz < Op_Interval[yy * 2 + 1] + 1; zz++)
+				{
+
+					if (zz == xx)
+						sum += ProbDivSum[xx] * (1 - ProbDiv[yy*latency + xx]);
+
+					else
+						sum += ProbDivSum[zz] * (0 - ProbDiv[yy*latency + zz]);
+
+#ifdef DEBUG_MODE
+					cout << yy << "\t" << xx << "\t" << zz << "\t" << sum << endl;
+#endif
+				}
+
+				SelfForce[yy*latency + xx] = sum;
+
+			}
+			else if (_operations[yy].getOperator() == "+" || _operations[yy].getOperator() == "-") {
+
+				double sum = 0;
+				for (int zz = Op_Interval[yy * 2]; zz < Op_Interval[yy * 2 + 1] + 1; zz++)
+				{
+
+					if (zz == xx)
+						sum += ProbAdderSum[xx] * (1 - ProbAdder[yy*latency + xx]);
+
+					else
+						sum += ProbAdderSum[zz] * (0 - ProbAdder[yy*latency + zz]);
+
+#ifdef DEBUG_MODE
+					cout << yy << "\t" << xx << "\t" << zz << "\t" << sum << endl;
+#endif
+				}
+
+				SelfForce[yy*latency + xx] = sum;
+
+			}
+			else {
+				double sum = 0;
+				for (int zz = Op_Interval[yy * 2]; zz < Op_Interval[yy * 2 + 1] + 1; zz++)
+				{
+
+					if (zz == xx)
+						sum += ProbLogicSum[xx] * (1 - ProbLogic[yy*latency + xx]);
+
+					else
+						sum += ProbLogicSum[zz] * (0 - ProbLogic[yy*latency + zz]);
+
+#ifdef DEBUG_MODE
+					cout << yy << "\t" << xx << "\t" << zz << "\t" << sum << endl;
+#endif
+				}
+
+				SelfForce[yy*latency + xx] = sum;
+
+
+			}
+
+		}
+	}
+
+#ifdef DEBUG_MODE
+	for (int yy = 0; yy < numOperations; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << SelfForce[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+#endif
+}
+
+
+void Circuit::getTimeInterval(vector<Operation> _operations, int latency)
+{
+	Op_Width = new int[numOperations];
+	Op_Interval = new int[numOperations * 2];
+#ifdef DEBUG_MODE
+	cout << "ii\tWidth\tStart\tEnd" << endl;
+#endif
+	for (int ii = 0; ii < numOperations; ii++)
+	{
+
+		Op_Width[ii] = ALAP_Op_Time[ii] - ASAP_Op_Time[ii] + 1;
+		Op_Interval[ii * 2] = ASAP_Op_Time[ii];
+		Op_Interval[ii * 2 + 1] = ALAP_Op_Time[ii];
+#ifdef DEBUG_MODE
+		cout << ii << "\t" << Op_Width[ii] << "\t" << Op_Interval[ii * 2] << "\t" << Op_Interval[ii * 2 + 1] << endl;
+#endif
+	}
+}
+void Circuit::SortNodes(vector<Operation> _operations, int latency)
+{
 	for (int ii = 0; ii < numOperations; ii++)
 	{
 		if (_operations[ii].getOperator() == "*") MultNodes.push_back(ii);
-		else if(_operations[ii].getOperator() == "/" || _operations[ii].getOperator() == "%") DivNodes.push_back(ii);
+		else if (_operations[ii].getOperator() == "/" || _operations[ii].getOperator() == "%") DivNodes.push_back(ii);
 		else if (_operations[ii].getOperator() == "+" || _operations[ii].getOperator() == "-")  AdderNodes.push_back(ii);
 		else LogicNodes.push_back(ii);
 	}
-	ProbMult  = new int[latency*numOperations];
-	ProbDiv   = new int[latency*numOperations];
-	ProbAdder = new int[latency*numOperations];
-	ProbLogic = new int[latency*numOperations];
+}
 
-	for (int ii = 0; ii < latency*numOperations;ii++) 
+void Circuit::getProbablityMatrix(vector<Operation> _operations, int latency)
+{
+
+	ProbMult = new double[latency*numOperations];
+	ProbDiv = new double[latency*numOperations];
+	ProbAdder = new double[latency*numOperations];
+	ProbLogic = new double[latency*numOperations];
+
+	ProbMultSum = new double[latency];
+	ProbDivSum = new double[latency];
+	ProbAdderSum = new double[latency];
+	ProbLogicSum = new double[latency];
+
+	for (int ii = 0; ii < latency*numOperations;ii++)
 	{
 		ProbMult[ii] = 0;
 		ProbDiv[ii] = 0;
@@ -59,20 +220,6 @@ bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency
 		ProbLogic[ii] = 0;
 	}
 
-	getASAP(_operations, latency);
-	getALAP(_operations, latency);
-
-	Op_Width = new int[numOperations];
-	Op_Interval = new int[numOperations * 2];
-	for (int ii = 0; ii < numOperations; ii++) 
-	{
-
-		Op_Width[ii] = ALAP_Op_Time[ii] - ASAP_Op_Time[ii] + 1;
-		Op_Interval[ii*2] = ASAP_Op_Time[ii];
-		Op_Interval[ii * 2 + 1] = ALAP_Op_Time[ii];
-
-		cout << Op_Width[ii] << "\t" << Op_Interval[ii * 2] << "\t" << Op_Interval[ii * 2 + 1] << endl;
-	}
 
 	for (int yy = 0; yy < numOperations; yy++)
 	{
@@ -83,34 +230,122 @@ bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency
 		{
 			for (int xx = Op_Interval[yy * 2];xx < Op_Interval[yy * 2 + 1] + 1; xx++)
 			{
-				ProbMult[yy*latency + xx] = 1 / Op_Width[yy];
+				ProbMult[yy*latency + xx] = 1 / (double)Op_Width[yy];
 			}
 		}
 		else if (op == "/" || op == "%")
 		{
 			for (int xx = Op_Interval[yy * 2];xx < Op_Interval[yy * 2 + 1] + 1; xx++)
 			{
-				ProbDiv[yy*latency + xx] = 1 / Op_Width[yy];
+				ProbDiv[yy*latency + xx] = 1 / (double)Op_Width[yy];
 			}
 		}
 		else if (op == "+" || op == "-")
 		{
 			for (int xx = Op_Interval[yy * 2];xx < Op_Interval[yy * 2 + 1] + 1; xx++)
 			{
-				ProbAdder[yy*latency + xx] = 1 / Op_Width[yy];
+				ProbAdder[yy*latency + xx] = 1 / (double)Op_Width[yy];
 			}
 		}
 		else
 		{
 			for (int xx = Op_Interval[yy * 2];xx < Op_Interval[yy * 2 + 1] + 1; xx++)
 			{
-				ProbLogic[yy*latency + xx] = 1 / Op_Width[yy];
+				ProbLogic[yy*latency + xx] = 1 / (double)Op_Width[yy];
 			}
 		}
 
 	}
-	
-	return true;
+
+
+	for (int xx = 0; xx < latency; xx++) {
+		double sumMult = 0;
+		double sumDiv = 0;
+		double sumAdder = 0;
+		double sumLogic = 0;
+		for (int yy = 0; yy < numOperations; yy++) {
+			sumMult += ProbMult[yy*latency + xx];
+			sumDiv += ProbDiv[yy*latency + xx];
+			sumAdder += ProbAdder[yy*latency + xx];
+			sumLogic += ProbLogic[yy*latency + xx];
+		}
+		ProbMultSum[xx] = sumMult;
+		ProbDivSum[xx] = sumDiv;
+		ProbAdderSum[xx] = sumAdder;
+		ProbLogicSum[xx] = sumLogic;
+	}
+
+
+#ifdef DEBUG_MODE
+	std::cout << std::fixed;
+	std::cout << std::setprecision(3);
+
+	cout << endl << "Prob Mult Matrix" << endl;
+	for (int yy = 0; yy < numOperations; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << ProbMult[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+
+	cout << endl << "Prob Mult Sum" << endl;
+	for (int yy = 0; yy < 1; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << ProbMultSum[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+
+	cout << endl << "Prob Div Matrix" << endl;
+	for (int yy = 0; yy < numOperations; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << ProbDiv[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+
+	cout << endl << "Prob Div Sum" << endl;
+	for (int yy = 0; yy < 1; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << ProbDivSum[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+
+	cout << endl << "Prob Adder Matrix" << endl;
+	for (int yy = 0; yy < numOperations; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << ProbAdder[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+
+	cout << endl << "Prob Adder Sum" << endl;
+	for (int yy = 0; yy < 1; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << ProbAdderSum[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+	cout << endl << "Prob Logic Matrix" << endl;
+	for (int yy = 0; yy < numOperations; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << ProbLogic[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+
+	cout << endl << "Prob Logic Sum" << endl;
+	for (int yy = 0; yy < 1; yy++) {
+		for (int xx = 0; xx < latency; xx++) {
+			cout << ProbLogicSum[yy*latency + xx] << "    ";
+		}
+		cout << endl;
+	}
+#endif
+
+
+
 
 }
 
@@ -147,8 +382,12 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
 		else if (op == "%") OperationDelay[ii] = 3;
 		else OperationDelay[ii] = 1;
 
-		cout << OperationDelay[ii] << endl;
+#ifdef DEBUG_MODE
+		cout <<"Node = " << ii << "\tOperator = " << op << "\tOperation Delay = " << OperationDelay[ii] << endl;
+#endif
 	}
+
+#ifdef DEBUG_MODE
 	cout << endl << "Parent Nodes" << endl;
 	for (int yy = 0; yy < _operations.size(); yy++)
 	{
@@ -156,12 +395,9 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
 		for (int xx = 0; xx < _parentCount[yy]; xx++)
 		{
 			cout << _ParentNodes[yy*(numOperations - 1) + xx] << "  ";
-
 		}
 		cout << endl;
-
 	}
-
 
 	cout << endl << "Child Nodes" << endl;
 	for (int yy = 0; yy < _operations.size(); yy++)
@@ -175,6 +411,7 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
 		cout << endl;
 
 	}
+#endif
 
 	//Loop through every operation
 	for (int ii = 0; ii < latency; ii++)
@@ -224,13 +461,8 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
 		if (!OpDone[ii]) printf("\nError: operation %d could not be scheduled/completed within latency constraint.\n", ii);
 	}
 
-	for (int ii = 0; ii < numOperations; ii++)
-	{
 
-		cout << StartTime[ii] << "\t" << EndTime[ii] << endl;
-
-	}
-
+#ifdef DEBUG_MODE
 	cout << endl << "ASAP Schedule" << endl;
 	for (int yy = 0; yy < latency; yy++)
 	{
@@ -238,12 +470,10 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
 		for (int xx = 0; xx < xIdx[yy]; xx++)
 		{
 			cout << _ASAP[yy*width + xx] << "  ";
-
 		}
 		cout << endl;
-
 	}
-	
+#endif	
 
 
 	delete[] xIdx;
@@ -270,10 +500,11 @@ void Circuit::getALAP(vector<Operation> _operations, int latency)
 	int *StartTime = new int[numOperations];
 	int *EndTime = new int[numOperations];
 	bool *OpDone = new bool[numOperations];
-	OperationDelay = new int[numOperations];
+	//OperationDelay = new int[numOperations];
 	ALAP_Op_Time = new int[numOperations];
-
-
+#ifdef DEBUG_MODE
+	cout << endl << "ALAP Scheduling" << endl;
+#endif
 	for (int ii = 0; ii < numOperations;ii++)
 	{
 		ALAP_Op_Time[ii] = 0;
@@ -285,9 +516,11 @@ void Circuit::getALAP(vector<Operation> _operations, int latency)
 		else if (op == "/") OperationDelay[ii] = 3;
 		else if (op == "%") OperationDelay[ii] = 3;
 		else OperationDelay[ii] = 1;
-
-		cout << OperationDelay[ii] << endl;
+#ifdef DEBUG_MODE
+		cout << "Node = " << ii << "\tOperator = " << op << "\tOperation Delay = " << OperationDelay[ii] << endl;
+#endif
 	}
+#ifdef DEBUG_MODE
 	cout << endl << "Parent Nodes" << endl;
 	for (int yy = 0; yy < _operations.size(); yy++)
 	{
@@ -295,12 +528,9 @@ void Circuit::getALAP(vector<Operation> _operations, int latency)
 		for (int xx = 0; xx < _parentCount[yy]; xx++)
 		{
 			cout << _ParentNodes[yy*(numOperations - 1) + xx] << "  ";
-
 		}
 		cout << endl;
-
 	}
-
 
 	cout << endl << "Child Nodes" << endl;
 	for (int yy = 0; yy < _operations.size(); yy++)
@@ -309,27 +539,25 @@ void Circuit::getALAP(vector<Operation> _operations, int latency)
 		for (int xx = 0; xx < _childCount[yy]; xx++)
 		{
 			cout << _ChildNodes[yy*(numOperations - 1) + xx] << "  ";
-
 		}
 		cout << endl;
-
 	}
-
+#endif
 	//Loop through every operation
 	for (int ii = latency-1; ii >= 0; ii--)
 	{
 		for (int yy = 0; yy < _operations.size(); yy++)
 		{
-			if (StartTime[yy] == ii) OpDone[yy] = true;
+			//if (StartTime[yy] == ii) OpDone[yy] = true;
 			if (!OpDone[yy] && StartTime[yy] == -1)
 			{
 				if (_childCount[yy] == 0)
 				{
-					_ALAP[ii*width + xIdx[ii]] = yy;
-					xIdx[ii]++;
-					StartTime[yy] = ii - OperationDelay[yy];
+					//_ALAP[ii*width + xIdx[ii]] = yy;
+					//xIdx[ii]++;
+					StartTime[yy] = ii - OperationDelay[yy]+1;
 					EndTime[yy] = ii ;
-					ALAP_Op_Time[yy] = ii;
+					//ALAP_Op_Time[yy] = ii;
 				}
 				else
 				{
@@ -345,15 +573,21 @@ void Circuit::getALAP(vector<Operation> _operations, int latency)
 					}
 					if (AllChildrenComplete)
 					{
-						_ALAP[ii*width + xIdx[ii]] = yy;
-						xIdx[ii]++;
-						StartTime[yy] = ii - OperationDelay[yy];
+						
+						
+						StartTime[yy] = ii - OperationDelay[yy]+1;
 						EndTime[yy] = ii ;
-						ALAP_Op_Time[yy] = ii;
+						
 					}
 				}
+				
 			}
-
+			if (StartTime[yy] == ii) {
+				OpDone[yy] = true;
+				ALAP_Op_Time[yy] = ii;
+				_ALAP[ii*width + xIdx[ii]] = yy;
+				xIdx[ii]++;
+			}
 		}
 
 	}
@@ -363,13 +597,8 @@ void Circuit::getALAP(vector<Operation> _operations, int latency)
 		if (!OpDone[ii]) printf("\nError: operation %d could not be scheduled/completed within latency constraint.\n", ii);
 	}
 
-	for (int ii = 0; ii < numOperations; ii++)
-	{
 
-		cout << StartTime[ii] << "\t" << EndTime[ii] << endl;
-
-	}
-
+#ifdef DEBUG_MODE
 	cout << endl << "ALAP Schedule" << endl;
 	for (int yy = 0; yy < latency; yy++)
 	{
@@ -377,12 +606,10 @@ void Circuit::getALAP(vector<Operation> _operations, int latency)
 		for (int xx = 0; xx < xIdx[yy]; xx++)
 		{
 			cout << _ALAP[yy*width + xx] << "  ";
-
 		}
 		cout << endl;
-
 	}
-
+#endif
 
 
 	delete[] xIdx;

@@ -8,6 +8,10 @@
 #ifndef CIRCUIT_H
 #define CIRCUIT_H
 
+#ifndef DEBUG_MODE
+#define DEBUG_MODE
+#endif
+
 #include <fstream>
 #include <iostream>
 #include <algorithm>
@@ -27,10 +31,18 @@ private:
 	std::vector<int> DivNodes;
 	std::vector<int> AdderNodes;
 	std::vector<int> LogicNodes;
-	int* ProbMult;
-	int* ProbDiv;
-	int* ProbAdder;
-	int* ProbLogic;
+	
+	double *ProbMultSum;
+	double *ProbDivSum;
+	double *ProbAdderSum;
+	double *ProbLogicSum;
+
+	double* ProbMult;
+	double* ProbDiv;
+	double* ProbAdder;
+	double* ProbLogic;
+
+	double* SelfForce;
 
 
     int* _ChildNodes;
@@ -62,6 +74,10 @@ public:
     
 	void getASAP(vector<Operation> _operations, int latency);
 	void getALAP(vector<Operation> _operations, int latency);
+	void SortNodes(vector<Operation> _operations, int latency);
+	void getTimeInterval(vector<Operation> _operations, int latency);
+	void getProbablityMatrix(vector<Operation> _operations, int latency);
+	void getSelfForce(vector<Operation> _operations, int latency);
 };
 #endif
 
