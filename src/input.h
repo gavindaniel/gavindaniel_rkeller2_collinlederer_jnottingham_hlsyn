@@ -30,10 +30,13 @@ public:
     vector<string> getVariables();
     bool getSigned();
     bool checkOperation(string netlistCode);
+    bool checkIfStatement(string netlistCode);  //new
+    bool checkCurlyBrace(string netlistCode);   //new
     string checkType(string netlistCode);
     string checkSize(string netlistCode);
     void checkVariables(string netlistCode);
     void parseOperation(string netlistCode);
+    void parseIfStatement(string netlistCode);  //new
 };
 #endif
 

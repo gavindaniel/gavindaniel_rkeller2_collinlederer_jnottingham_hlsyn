@@ -54,7 +54,7 @@ void Input::ParseInput() {
     string netlistCode = this->getContent();
     
     // check if variable definition or operation
-    if (!checkOperation(netlistCode)) { // variable definition
+    if (!checkOperation(netlistCode) && !checkIfStatement(netlistCode) && !checkCurlyBrace(netlistCode)) { // variable definition
         // checks variable type
         netlistCode = checkType(netlistCode);
         netlistCode = checkSize(netlistCode);
@@ -66,8 +66,31 @@ void Input::ParseInput() {
     
 }
 
+bool Input::checkCurlyBrace(string netlistCode) {
+    if (netlistCode.find("}") != string::npos) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
 bool Input::checkOperation(string netlistCode) {
     if (netlistCode.find("=") != string::npos) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+bool Input::checkIfStatement(string netlistCode) {
+    if ((netlistCode.find("if") != string::npos) && (netlistCode.find("else") == string::npos)) { // if
+        return true;
+    }
+    else if((netlistCode.find("if") != string::npos) && (netlistCode.find("else") != string::npos)) { // else if
+        return true;
+    }
+    else if ((netlistCode.find("if") == string::npos) && (netlistCode.find("else") != string::npos)) { // else
         return true;
     }
     else {
@@ -83,10 +106,13 @@ string Input::checkType(string netlistCode) {
     else if (netlistCode.find("output") != string::npos) {
         _type = "output";
     }
-    else if (netlistCode.find("wire") != string::npos) {
-        _type = "wire";
-    }
-    else if (netlistCode.find("register") != string::npos) {
+//    else if (netlistCode.find("wire") != string::npos) {
+//        _type = "wire";
+//    }
+//    else if (netlistCode.find("register") != string::npos) {
+//        _type = "wire";
+//    }
+    else if (netlistCode.find("variable") != string::npos) {
         _type = "wire";
     }
     netlistCode = netlistCode.substr(netlistCode.find(" ") + 1);
