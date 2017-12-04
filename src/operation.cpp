@@ -18,18 +18,9 @@ Operation::Operation(){
     _operator = 'z';
 }
 
-string Operation::getOperator() {   return _operator;   }
-Node Operation::getResult() {   return _result;     }
-Node Operation::get_varA() {    return _a;      }
-Node Operation::get_varB() {    return _b;      }
-Node Operation::get_varC() {    return _c;      }
 
 
-void Operation::setOperator(string op) {    _operator = op;     }
-void Operation::setResult(Node r) {     _result = r;    }
-void Operation::set_varA(Node a) {  _a = a;   }
-void Operation::set_varB(Node b) {  _b = b;   }
-void Operation::set_varC(Node c) {  _c = c;   }
+
 
 
 string Operation::convertOperation() {

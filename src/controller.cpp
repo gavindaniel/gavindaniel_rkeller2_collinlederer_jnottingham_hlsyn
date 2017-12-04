@@ -13,6 +13,7 @@
 #include "input.h"
 #include "node.h"
 #include "circuit.h"
+#include "condition.h"
 
 using namespace std;
 
@@ -23,11 +24,14 @@ Controller::Controller(string inputFilePath, string outputFilePath){
     _inputFilePath = inputFilePath;
     _outputFilePath = outputFilePath;
     
-    Node Clk = Node("input Int1 Clk, Rst", "Clk", 1, "input", true);
-    Node Rst = Node("input Int1 Clk, Rst", "Rst", 1, "input", true);
+    Node Clk = Node("input Int1 Clk, Rst, Start", "Clk", 1, "input", true);
+    Node Rst = Node("input Int1 Clk, Rst, Start", "Rst", 1, "input", true);
+    Node Start = Node("input Int1 Clk, Rst, Start", "Start", 1, "input", true);
+    Node Done = Node("output reg Int1 Done", "Done", 1, "output", true);
     _variables.push_back(Clk);
     _variables.push_back(Rst);
-    
+    _variables.push_back(Start);
+    _variables.push_back(Done);
 }
 /*
  * Description: Getters
@@ -43,7 +47,7 @@ vector<Node> Controller::getVariables() {
 }
 
 /*
- * Description: Read Cards from a File
+ * Description: Read  from a File
  */
 
 bool Controller::readFromFile() {
@@ -51,6 +55,10 @@ bool Controller::readFromFile() {
     string lineBuffer;
     string verilogCode;
     Operation tempOperation;
+    Operation temp;
+    Condition tempCondition;
+    vector<Condition> parentConditions;
+    int num_if_statement_open = 0;
     
     if (!inputFile.is_open()) {
         cout << "Could not open netlist " << _inputFilePath << endl;
@@ -72,7 +80,41 @@ bool Controller::readFromFile() {
                 if (tempOperation.getOperator() == "z") {
                     return false;
                 }
-                _operations.push_back(tempOperation);
+                if (num_if_statement_open > 0) { //this operation is inside an if statement
+                    tempCondition.addOperation(tempOperation);
+                }
+                else
+                    _operations.push_back(tempOperation);
+            }
+            if (newInput.checkIfStatement(lineBuffer)) {
+                if (tempCondition.getVariable().getVariableName() == "")
+                    tempCondition = parseIfStatement(lineBuffer);
+                else { // nested if statement
+                    parentConditions.push_back(tempCondition);
+                    tempCondition = parseIfStatement(lineBuffer);
+                }
+                if (tempCondition.getVariable().getVariableName() == "") {
+                    return false;
+                }
+                num_if_statement_open++;
+                
+            }
+            if(lineBuffer.find("}") != string::npos) {
+                if (!parentConditions.empty()) {
+                    temp.setOperator("{");
+                    temp.set_ifstatement(tempCondition);
+                    parentConditions.back().addCondition(tempCondition);
+//                    tempCondition = parentConditions.back();
+                    parentConditions.pop_back();
+                }
+                else { // no parent if statements
+                    _ifstatements.push_back(tempCondition);
+                    temp.setOperator("{");
+                    temp.set_ifstatement(tempCondition);
+                    _operations.push_back(temp);
+                    tempCondition = Condition();
+                }
+                num_if_statement_open--;
             }
         }
     }
@@ -93,6 +135,35 @@ void Controller::addNodes(Input inp) {
     }
 }
 
+string Controller::checkForTabs(string netlistCode) {
+    if (netlistCode.find("\t") != string::npos) {
+        netlistCode = netlistCode.substr(netlistCode.find_last_of("\t")+1, netlistCode.length());
+    }
+    return netlistCode;
+}
+/*
+ * Description: Parse netlistCode for an operation and convert it into an Operation (object)
+ */
+Condition Controller::parseIfStatement(string netlistCode) {
+    Condition newCondition = Condition();
+    Node tempNode;
+    string varName;
+    // check for a comment
+    if (netlistCode.find("//") != string::npos) {   netlistCode = netlistCode.substr(0,netlistCode.find("//"));    }
+    netlistCode = checkForTabs(netlistCode);
+    if (netlistCode.find(" )") != string::npos)
+        cout << netlistCode.find(" )") << endl;
+    cout << netlistCode.length();
+    netlistCode = netlistCode.substr(netlistCode.find("if ( ")+5, netlistCode.length()); //(netlistCode.length() - netlistCode.find(" )"))+1
+    for (int i = 0; i < netlistCode.length(); i++) {
+        if (netlistCode.at(i) == ' ')
+            break;
+        varName += netlistCode.at(i);
+    }
+    tempNode = findVariable(varName);
+    newCondition.setVariable(tempNode);
+    return newCondition;
+}
 /*
  * Description: Parse netlistCode for an operation and convert it into an Operation (object)
  */
@@ -105,6 +176,8 @@ Operation Controller::parseOperation(string netlistCode) {
     
     // check for a comment
     if (netlistCode.find("//") != string::npos) {   netlistCode = netlistCode.substr(0,netlistCode.find("//"));    }
+    
+    netlistCode = checkForTabs(netlistCode);
     
     for (unsigned int i = 0; i < netlistCode.length(); i++) {
         // check for punctuation / spaces
@@ -221,33 +294,50 @@ Node Controller::findVariable(string varName) {
     }
     return Node();
 }
+
+
+/*
+ * Description: Writes to the Output File
+ */
+void Controller::writeToFile() {
+    ofstream outputFile(_outputFilePath);
+    
+    if (!outputFile.is_open()) {
+        cout << "Error opening output file " << _outputFilePath << endl;
+    }
+    
+    outputFile << writeModule() << "\r\n";
+    outputFile << writeVariables() << "\r\n";
+    
+    for(string line : _verilogLines){
+        outputFile << "\t" << line << "\r\n";
+        cout << "\t" << line << "\r\n";
+    }
+    outputFile << "endmodule";
+    
+    outputFile.close();
+}
+
 /*
  * Description: Write to the Output file
  */
 string Controller::writeModule() {
     
     string moduleDef;
-    string circuitName = _inputFilePath.substr(_inputFilePath.find_last_of("/")+1);
     
     moduleDef = "`timescale 1ns / 1ps\n\n";
-    
-    circuitName = circuitName.substr(0,circuitName.find(".txt"));
-    moduleDef += "module " + circuitName + "(";
-    
-    for (unsigned int i = 0; i < _variables.size(); i++){
-        if (i == 0) {
-            if (_variables.at(i).getVariableType() == "input" || _variables.at(i).getVariableType() == "output"){
-                moduleDef += _variables.at(i).getVariableName();
+    moduleDef += "module HLSM (";
+    for (Node variable : _variables){
+        if (variable.getVariableName() == _variables.at(0).getVariableName())
+            moduleDef += variable.getVariableName();
+        else
+            if (variable.getVariableType() == "input" || variable.getVariableType() == "output"){
+                moduleDef += ", " + variable.getVariableName();
             }
-        }
-        else {
-            if (_variables.at(i).getVariableType() == "input" || _variables.at(i).getVariableType() == "output"){
-                moduleDef += ", " + _variables.at(i).getVariableName();
-            }
-        }
     }
+    moduleDef += ");\n";
     
-    moduleDef += ");";
+    cout << moduleDef;
     
     return moduleDef;
 }
@@ -255,7 +345,7 @@ string Controller::writeModule() {
  * Description: Writes the list of Variables to a string
  */
 string Controller::writeVariables() {
-
+    
     string verilogVariables;
     string type;
     int bitWidth;
@@ -294,41 +384,27 @@ string Controller::writeVariables() {
         }
         
         index++;
-
+        
     }
     verilogVariables += ";\n";
     
+    cout << verilogVariables;
+    
     return verilogVariables;
 }
-
-/*
- * Description: Writes to the Output File
- */
-void Controller::writeToFile() {
-    ofstream outputFile(_outputFilePath);
-    
-    if (!outputFile.is_open()) {
-        cout << "Error opening output file " << _outputFilePath << endl;
-    }
-    
-    outputFile << writeModule() << "\r\n";
-    outputFile << writeVariables() << "\r\n";
-    
-    for(string line : _verilogLines){
-        outputFile << "\t" << line << "\r\n";
-    }
-    outputFile << "endmodule";
-    
-    outputFile.close();
-}
-
 /*
  * Description: loops through the list of Operations and tries to convert each Operation
  */
 bool Controller::convertOperations() {
     string verilog;
     for (Operation op : _operations) {
-        verilog = op.convertOperation();
+        if (op.getOperator() != "{") {
+            verilog = op.convertOperation();
+        }
+        else { // if statement
+            verilog = _ifstatements.front().convertIfStatement();
+            
+        }
         if (verilog != "ERROR") {
             _verilogLines.push_back(verilog);
         }

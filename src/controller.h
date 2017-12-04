@@ -13,6 +13,7 @@
 #include "input.h"
 #include "node.h"
 #include "operation.h"
+#include "condition.h"
 
 using namespace std;
 
@@ -24,6 +25,7 @@ private:
     vector<string> _verilogLines;
     vector<Node> _variables;
     vector<Operation> _operations;
+    vector<Condition> _ifstatements;    //new
 public:
     Controller(string inputFilePath, string outputFilePath);
     
@@ -40,9 +42,11 @@ public:
     string checkSign(Operation oper, Node var);
     void writeToFile();
     Operation parseOperation(string netlistCode);
+    Condition parseIfStatement(string netlistCode); //new
     Node findVariable(string varName);
     void getCriticalPath();
 	bool PerformScheduling(int latency);
+    string checkForTabs(string netlistCode);
 };
 
 
