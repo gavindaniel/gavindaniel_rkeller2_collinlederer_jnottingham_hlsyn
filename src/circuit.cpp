@@ -264,7 +264,9 @@ void Circuit::getTotalForce(vector<Operation> _operations, int latency)
 				int CurrentChild = _DescendantNodes[min_y*Width + child];
 				if (!node_done[CurrentChild]) {
 					int OldStart = Op_Interval[CurrentChild * 2];
+					int CurrentEnd = Op_Interval[CurrentChild * 2+1];
 					int NewStart = OldStart + descendantDiff;
+					if (NewStart > CurrentEnd) NewStart = CurrentEnd;
 					if (NewStart > OldStart && Op_Width[CurrentChild] > 1) {
 #ifdef DEBUG_MODE
 						cout << "Current descendant = " << CurrentChild << "\tOld Start = " << OldStart << "\t New Start = " << NewStart << endl;
@@ -286,7 +288,9 @@ void Circuit::getTotalForce(vector<Operation> _operations, int latency)
 				int CurrentParent = _AncestorNodes[min_y*Width + parent];
 				if (!node_done[CurrentParent]) {
 					int OldEnd = Op_Interval[CurrentParent * 2 + 1];
+					int CurrentStart = Op_Interval[CurrentParent * 2];
 					int NewEnd = OldEnd - ancestorDiff;
+					if (NewEnd > CurrentStart) NewEnd = CurrentStart;
 					if (NewEnd < OldEnd && Op_Width[CurrentParent] > 1) {
 #ifdef DEBUG_MODE
 						cout << "Current ancestor = " << CurrentParent << "\tOld end = " << OldEnd << "\t New End = " << NewEnd << endl;
@@ -311,7 +315,7 @@ void Circuit::getTotalForce(vector<Operation> _operations, int latency)
 			
 #endif
 		}
-		//int stophere = 0;
+		int stophere = 0;
 	}
 	else 
 		FDS_DONE = true;
