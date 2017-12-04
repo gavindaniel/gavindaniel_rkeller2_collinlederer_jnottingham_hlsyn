@@ -13,7 +13,6 @@
 #include "input.h"
 #include "node.h"
 #include "circuit.h"
-#include "condition.h"
 
 using namespace std;
 
@@ -56,8 +55,11 @@ bool Controller::readFromFile() {
     string verilogCode;
     Operation tempOperation;
     Operation temp;
-    Condition tempCondition;
-    vector<Condition> parentConditions;
+//    Condition tempCondition;
+//    Condition temp2;
+//    vector<Condition> parentConditions;
+    Operation tempCondition;
+    vector<Operation> parentConditions;
     int num_if_statement_open = 0;
     
     if (!inputFile.is_open()) {
@@ -102,17 +104,22 @@ bool Controller::readFromFile() {
             if(lineBuffer.find("}") != string::npos) {
                 if (!parentConditions.empty()) {
                     temp.setOperator("{");
-                    temp.set_ifstatement(tempCondition);
+//                    temp.set_ifstatement((Condition*)&tempCondition);
+//                    temp.set_ifstatement(tempCondition);
                     parentConditions.back().addCondition(tempCondition);
-//                    tempCondition = parentConditions.back();
+                    tempCondition = parentConditions.back();
                     parentConditions.pop_back();
                 }
                 else { // no parent if statements
                     _ifstatements.push_back(tempCondition);
                     temp.setOperator("{");
-                    temp.set_ifstatement(tempCondition);
-                    _operations.push_back(temp);
-                    tempCondition = Condition();
+//                    Condition temp2;
+//                    temp2.setVariable(tempCondition.getVariable());
+//                    temp2.setConditions(tempCondition.getConditions());
+//                    temp2.setOperations(tempCondition.getOperations());
+//                    temp.set_ifstatement(tempCondition);
+                    _operations.push_back(tempCondition);
+                    tempCondition = Operation();
                 }
                 num_if_statement_open--;
             }
@@ -144,8 +151,8 @@ string Controller::checkForTabs(string netlistCode) {
 /*
  * Description: Parse netlistCode for an operation and convert it into an Operation (object)
  */
-Condition Controller::parseIfStatement(string netlistCode) {
-    Condition newCondition = Condition();
+Operation Controller::parseIfStatement(string netlistCode) {
+    Operation newCondition = Operation();
     Node tempNode;
     string varName;
     // check for a comment
@@ -402,7 +409,7 @@ bool Controller::convertOperations() {
             verilog = op.convertOperation();
         }
         else { // if statement
-            verilog = _ifstatements.front().convertIfStatement();
+//            verilog = _ifstatements.front().convertIfStatement();
             
         }
         if (verilog != "ERROR") {
@@ -432,5 +439,42 @@ bool Controller::PerformScheduling(int latency)
 	return ret;
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+///*
+// * Description: Parse netlistCode for an operation and convert it into an Operation (object)
+// */
+//Condition Controller::parseIfStatement(string netlistCode) {
+//    Condition newCondition = Condition();
+//    Node tempNode;
+//    string varName;
+//    // check for a comment
+//    if (netlistCode.find("//") != string::npos) {   netlistCode = netlistCode.substr(0,netlistCode.find("//"));    }
+//    netlistCode = checkForTabs(netlistCode);
+//    if (netlistCode.find(" )") != string::npos)
+//        cout << netlistCode.find(" )") << endl;
+//    cout << netlistCode.length();
+//    netlistCode = netlistCode.substr(netlistCode.find("if ( ")+5, netlistCode.length()); //(netlistCode.length() - netlistCode.find(" )"))+1
+//    for (int i = 0; i < netlistCode.length(); i++) {
+//        if (netlistCode.at(i) == ' ')
+//            break;
+//        varName += netlistCode.at(i);
+//    }
+//    tempNode = findVariable(varName);
+//    newCondition.setVariable(tempNode);
+//    return newCondition;
+//}
 
 

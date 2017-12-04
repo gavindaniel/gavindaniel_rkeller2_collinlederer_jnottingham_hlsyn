@@ -322,6 +322,23 @@ string Operation::checkSign(Node var) {
 
 
 
+string Operation::getOperator() {   return _operator;   }
+Node Operation::getResult() {   return _result;     }
+Node Operation::get_varA() {    return _a;      }
+Node Operation::get_varB() {    return _b;      }
+Node Operation::get_varC() {    return _c;      }
+//    Operation Operation::get_ifstatement() {   return _ifstatement;    }
+void Operation::setOperator(string op) {    _operator = op;     }
+void Operation::setResult(Node r) {     _result = r;    }
+void Operation::set_varA(Node a) {  _a = a;   }
+void Operation::set_varB(Node b) {  _b = b;   }
+void Operation::set_varC(Node c) {  _c = c;   }
+//void Operation::set_ifstatement(Operation newIf) { _ifstatement = newIf; }
+
+
+//new
+void Operation::addOperation(Operation newOp) { _operations.push_back(newOp); }
+void Operation::addCondition(Operation newIf) { _ifstatements.push_back(newIf); }
 
 
 
