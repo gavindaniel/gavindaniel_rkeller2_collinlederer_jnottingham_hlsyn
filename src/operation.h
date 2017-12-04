@@ -27,7 +27,7 @@ private:
     
     //new
     vector<Operation> _operations;
-    vector<Operation> _ifstatements;
+//    vector<Operation> _ifstatements;
     
 public:
 

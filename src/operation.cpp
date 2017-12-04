@@ -338,7 +338,7 @@ void Operation::set_varC(Node c) {  _c = c;   }
 
 //new
 void Operation::addOperation(Operation newOp) { _operations.push_back(newOp); }
-void Operation::addCondition(Operation newIf) { _ifstatements.push_back(newIf); }
+//void Operation::addCondition(Operation newIf) { _ifstatements.push_back(newIf); }
 
 
 

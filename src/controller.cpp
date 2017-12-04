@@ -55,9 +55,6 @@ bool Controller::readFromFile() {
     string verilogCode;
     Operation tempOperation;
     Operation temp;
-//    Condition tempCondition;
-//    Condition temp2;
-//    vector<Condition> parentConditions;
     Operation tempCondition;
     vector<Operation> parentConditions;
     int num_if_statement_open = 0;
@@ -103,21 +100,11 @@ bool Controller::readFromFile() {
             }
             if(lineBuffer.find("}") != string::npos) {
                 if (!parentConditions.empty()) {
-                    temp.setOperator("{");
-//                    temp.set_ifstatement((Condition*)&tempCondition);
-//                    temp.set_ifstatement(tempCondition);
-                    parentConditions.back().addCondition(tempCondition);
+                    parentConditions.back().addOperation(tempCondition);
                     tempCondition = parentConditions.back();
                     parentConditions.pop_back();
                 }
                 else { // no parent if statements
-                    _ifstatements.push_back(tempCondition);
-                    temp.setOperator("{");
-//                    Condition temp2;
-//                    temp2.setVariable(tempCondition.getVariable());
-//                    temp2.setConditions(tempCondition.getConditions());
-//                    temp2.setOperations(tempCondition.getOperations());
-//                    temp.set_ifstatement(tempCondition);
                     _operations.push_back(tempCondition);
                     tempCondition = Operation();
                 }
@@ -169,6 +156,7 @@ Operation Controller::parseIfStatement(string netlistCode) {
     }
     tempNode = findVariable(varName);
     newCondition.setVariable(tempNode);
+    newCondition.setOperator("{");
     return newCondition;
 }
 /*
