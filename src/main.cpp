@@ -10,13 +10,14 @@
 #include <sstream>
 #include <string>
 #include "controller.h"
+#include <cstdlib>
 
 using namespace std;
 
 int main(int argc, char* argv[]) {
     
-    if (argc != 3) {
-        cout << "Usage: dpgen netlistFile verilogFile" << endl;
+    if (argc != 4) {
+        cout << "Error: Invalid number of arguments. Usage: dpgen netlistFile verilogFile" << endl;
         return 1;
     }
     else {
@@ -25,17 +26,18 @@ int main(int argc, char* argv[]) {
         bool success = true;
         
         inputPath << argv[1];
-        outputPath << argv[2];
+		int latency = atoi(argv[2]);
+        outputPath << argv[3];
 
-		int latency = 10;
+		
         
-        Controller controller(inputPath.str(), outputPath.str());
+        Controller controller(inputPath.str(), outputPath.str(),latency);
         
         success = controller.readFromFile();
-        if (success) {  success = controller.convertOperations(); controller.getCriticalPath(); }
+		if(success) success = controller.PerformScheduling(latency);
         if (success) {  controller.writeToFile();   }
 
-		controller.PerformScheduling(latency);
+
         
         return 0;
     }

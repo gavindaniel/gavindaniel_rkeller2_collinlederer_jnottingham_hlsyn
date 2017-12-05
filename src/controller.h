@@ -20,15 +20,19 @@ class Controller{
 private:
     string _inputFilePath;
     string _outputFilePath;
+	int _latency;
     vector<string> _linesFromInputFile;
     vector<string> _verilogLines;
     vector<Node> _variables;
     vector<Operation> _operations;
 //    vector<Condition> _ifstatements;    //new
     vector<Operation> _ifstatements;    //new
+	
+	int* _Schedule;
+	int* _scheduleCount;
     
 public:
-    Controller(string inputFilePath, string outputFilePath);
+    Controller(string inputFilePath, string outputFilePath,int latency);
     
     vector<Operation> getOperations();
     vector<Node> getVariables();
@@ -40,6 +44,7 @@ public:
     void addNodes(Input inp);
     string writeModule();
     string writeVariables();
+	string writeStateMachine();
     string checkSign(Operation oper, Node var);
     void writeToFile();
     Operation parseOperation(string netlistCode);

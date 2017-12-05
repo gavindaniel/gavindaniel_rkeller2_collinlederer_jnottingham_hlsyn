@@ -9,7 +9,7 @@
 #define CIRCUIT_H
 
 #ifndef DEBUG_MODE
-//#define DEBUG_MODE
+#define DEBUG_MODE
 #endif
 
 #include <fstream>
@@ -84,9 +84,10 @@ public:
     void getCriticalPath(vector<Operation> _operations);
     void getParentNodes(vector<Operation> _operations);
     void getChildNodes(vector<Operation> _operations);
+    void getDescendantNodes(vector<Operation> _operations);
     double getOperationLatency(Operation op);
 
-	bool ForceDirectedScheduling(vector<Operation> _operations, int latency);
+	bool ForceDirectedScheduling(vector<Operation> _operations, int latency, int* _Schedule, int* _ScheduleCount);
     
 	void getASAP(vector<Operation> _operations, int latency);
 	void getALAP(vector<Operation> _operations, int latency);

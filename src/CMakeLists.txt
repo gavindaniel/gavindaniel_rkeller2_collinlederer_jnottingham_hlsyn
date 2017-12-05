@@ -31,6 +31,6 @@ file( GLOB SRCS *.cpp *.h )
 # Define the target application executable (named echoer) and the list of C source
 # and header files needed for the executable.
 
-add_executable( dpgen ${SRCS} )
+add_executable( hlsyn ${SRCS} )
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")

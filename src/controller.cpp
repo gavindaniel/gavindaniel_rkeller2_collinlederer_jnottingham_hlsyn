@@ -19,9 +19,10 @@ using namespace std;
 /**
  * Description: contrusctor for Controller
  */
-Controller::Controller(string inputFilePath, string outputFilePath){
+Controller::Controller(string inputFilePath, string outputFilePath,int latency){
     _inputFilePath = inputFilePath;
     _outputFilePath = outputFilePath;
+	_latency = latency;
     
     Node Clk = Node("input Int1 Clk, Rst, Start", "Clk", 1, "input", true);
     Node Rst = Node("input Int1 Clk, Rst, Start", "Rst", 1, "input", true);
@@ -50,73 +51,74 @@ vector<Node> Controller::getVariables() {
  */
 
 bool Controller::readFromFile() {
-    ifstream inputFile(_inputFilePath);
-    string lineBuffer;
-    string verilogCode;
-    Operation tempOperation;
-    Operation temp;
-    Operation tempCondition;
-    vector<Operation> parentConditions;
-    int num_if_statement_open = 0;
-    
-    if (!inputFile.is_open()) {
-        cout << "Could not open netlist " << _inputFilePath << endl;
-        return false;
-    }
-    
-    while(!inputFile.eof()) {
-        getline(inputFile, lineBuffer);
-        Input newInput = Input(lineBuffer);
-        if(newInput.IsValid()){
-            _linesFromInputFile.push_back(lineBuffer);
-            newInput.ParseInput();
-            // found some variables to add 
-            if (newInput.getVariables().size() > 0) {
-                addNodes(newInput);
-            }
-            if (newInput.checkOperation(lineBuffer)){
-                tempOperation = parseOperation(lineBuffer);
-                if (tempOperation.getOperator() == "z") {
-                    return false;
-                }
-                if (num_if_statement_open > 0) { //this operation is inside an if statement
-                    tempCondition.addOperation(tempOperation);
-                }
-                else
-                    _operations.push_back(tempOperation);
-            }
-            if (newInput.checkIfStatement(lineBuffer)) {
-                if (tempCondition.getVariable().getVariableName() == "")
-                    tempCondition = parseIfStatement(lineBuffer);
-                else { // nested if statement
-                    parentConditions.push_back(tempCondition);
-                    tempCondition = parseIfStatement(lineBuffer);
-                }
-                if (tempCondition.getVariable().getVariableName() == "") {
-                    return false;
-                }
-                num_if_statement_open++;
-                
-            }
-            if(lineBuffer.find("}") != string::npos) {
-                if (!parentConditions.empty()) {
-                    parentConditions.back().addOperation(tempCondition);
-                    tempCondition = parentConditions.back();
-                    parentConditions.pop_back();
-                }
-                else { // no parent if statements
-                    _operations.push_back(tempCondition);
-                    tempCondition = Operation();
-                }
-                num_if_statement_open--;
-            }
-        }
-    }
-    
-    inputFile.close();
-    return true;
-}
+	ifstream inputFile(_inputFilePath);
+	string lineBuffer;
+	string verilogCode;
+	Operation tempOperation;
+	Operation temp;
+	Operation tempCondition;
+	vector<Operation> parentConditions;
+	int num_if_statement_open = 0;
 
+	if (!inputFile.is_open()) {
+		cout << "Could not open netlist " << _inputFilePath << endl;
+		return false;
+	}
+
+	while (!inputFile.eof()) {
+		getline(inputFile, lineBuffer);
+		Input newInput = Input(lineBuffer);
+		if (newInput.IsValid()) {
+			_linesFromInputFile.push_back(lineBuffer);
+			newInput.ParseInput();
+			// found some variables to add 
+			if (newInput.getVariables().size() > 0) {
+				addNodes(newInput);
+			}
+			if (newInput.checkOperation(lineBuffer)) {
+				tempOperation = parseOperation(lineBuffer);
+				if (tempOperation.getOperator() == "z") {
+					return false;
+				}
+				if (num_if_statement_open > 0) { //this operation is inside an if statement
+					tempCondition.addOperation(tempOperation);
+				}
+				else
+					_operations.push_back(tempOperation);
+			}
+			if (newInput.checkIfStatement(lineBuffer)) {
+				if (tempCondition.getVariable().getVariableName() == "")
+					tempCondition = parseIfStatement(lineBuffer);
+				else { // nested if statement
+					parentConditions.push_back(tempCondition);
+					tempCondition = parseIfStatement(lineBuffer);
+				}
+				if (tempCondition.getVariable().getVariableName() == "") {
+					return false;
+				}
+				num_if_statement_open++;
+
+			}
+			if (lineBuffer.find("}") != string::npos) {
+				if (!parentConditions.empty()) {
+					parentConditions.back().addOperation(tempCondition);
+					tempCondition = parentConditions.back();
+					parentConditions.pop_back();
+				}
+				else { // no parent if statements
+					_operations.push_back(tempCondition);
+					for (int if_counter = 0; if_counter < tempCondition.getOperations().size(); if_counter++)
+						_operations.push_back(tempCondition.getOperations().at(0));
+					tempCondition = Operation();
+				}
+				num_if_statement_open--;
+			}
+		}
+	}
+
+	inputFile.close();
+	return true;
+}
 /*
  * Description: Creates a Node from an Input and adds it to the list of Variables.
  */
@@ -303,6 +305,8 @@ void Controller::writeToFile() {
     
     outputFile << writeModule() << "\r\n";
     outputFile << writeVariables() << "\r\n";
+	outputFile << writeStateMachine() << "\r\n";
+
     
     for(string line : _verilogLines){
         outputFile << "\t" << line << "\r\n";
@@ -311,6 +315,73 @@ void Controller::writeToFile() {
     outputFile << "endmodule";
     
     outputFile.close();
+}
+
+string Controller::writeStateMachine() {
+
+	string StateMachine = "";
+	unsigned int index = 1;
+
+	StateMachine += "\n\talways@(posedge Clk) begin\n";
+	StateMachine += "\n\t\tif(Rst == 1) begin\n";
+    StateMachine += "\t\t\tDone <= 0;\n";
+	StateMachine += "\t\t\tState = Wait;\n";
+
+	while (index < _variables.size()) {
+		string type = _variables.at(index).getVariableType();
+		if (type != "input")
+			StateMachine += "\t\t\t" + _variables.at(index).getVariableName() + " <= 0;\n";
+
+		index++;
+	}
+	StateMachine += "\t\tend\n";
+	StateMachine += "\t\telse\n";
+	StateMachine += "\t\t\tcase(State)\n";
+	StateMachine += "\t\t\t\tWait : begin\n";
+	StateMachine += "\t\t\t\t\tDone <= 0;\n";
+	index = 1;
+	while (index < _variables.size()) {
+		string type = _variables.at(index).getVariableType();
+		if (type != "input" && type != "output")
+			StateMachine += "\t\t\t\t\t" + _variables.at(index).getVariableName() + " <= 0;\n";
+
+		index++;
+	}
+
+	StateMachine += "\t\t\t\t\tif(Start == 1)\n\t\t\t\t\t\tState = S1;\n";
+
+	StateMachine += "\t\t\t\tend\n";
+
+	for (int ii = 1; ii < _latency + 1; ii++)
+	{
+		StateMachine += "\t\t\t\tS" + to_string(ii) + " : begin\n";
+		for (int xx = 0; xx < _scheduleCount[ii-1]; xx++)
+		{
+
+			int CurrentNode = _Schedule[(ii-1)*_operations.size() + xx];
+			Operation CurrentOp = _operations[CurrentNode];
+			if (CurrentOp.get_varC().getVariableName() == "")
+				StateMachine += "\t\t\t\t\t" + CurrentOp.getResult().getVariableName() + " <= " + CurrentOp.get_varA().getVariableName() + " " + CurrentOp.getOperator() + " " + CurrentOp.get_varB().getVariableName() + ";\n";
+			else
+				StateMachine += "\t\t\t\t\t" + CurrentOp.getResult().getVariableName() + " <= " + CurrentOp.get_varA().getVariableName() + " ? " + CurrentOp.get_varB().getVariableName() + " : " + CurrentOp.get_varC().getVariableName() + ";\n";
+
+		}
+		if (ii != _latency)
+			StateMachine += "\t\t\t\t\t State = S" + to_string(ii + 1) + ";\n";
+		else
+			StateMachine += "\t\t\t\t\t State = Final;\n";
+
+		StateMachine += "\t\t\t\tend\n";
+
+	}
+	StateMachine += "\t\t\t\tFinal : begin\n";
+	StateMachine += "\t\t\t\t\tDone <= 1;\n";
+	StateMachine += "\t\t\t\t\tState = Wait;\n";
+	StateMachine += "\t\t\t\tend\n";
+	StateMachine += "\t\t\tendcase\n";
+	StateMachine += "\t\tend\n";
+
+	return StateMachine;
 }
 
 /*
@@ -342,8 +413,8 @@ string Controller::writeModule() {
 string Controller::writeVariables() {
     
     string verilogVariables;
-    string type;
-    int bitWidth;
+    string type,previousType = "";
+    int bitWidth,previousBitWidth = 0;
     unsigned int index = 1;
     
     type = _variables.at(0).getVariableType();
@@ -358,17 +429,18 @@ string Controller::writeVariables() {
     
     
     while(index < _variables.size()) {
+		type = _variables.at(index).getVariableType();
+		bitWidth = _variables.at(index).getBitWidth();
+		if (type == "output") {
+			type = "output reg";
+		}
+
+		if (type == "wire") type = "reg";
         
-        if (_variables.at(index).getVariableType() == type && _variables.at(index).getBitWidth() == bitWidth) {
+        if (previousType == type && previousBitWidth == bitWidth) {
             verilogVariables += ", " + _variables.at(index).getVariableName();
         }
         else {
-            type = _variables.at(index).getVariableType();
-            bitWidth = _variables.at(index).getBitWidth();
-            
-            if (type == "output") {
-                type = "output wire";
-            }
             
             if (bitWidth > 1){
                 verilogVariables += ";\n\t" + type + " [" + to_string(bitWidth-1) + ":0] " + _variables.at(index).getVariableName();
@@ -377,11 +449,23 @@ string Controller::writeVariables() {
                 verilogVariables += ";\n\t" + type + " " + _variables.at(index).getVariableName();
             }
         }
-        
+
         index++;
-        
+		previousType = type;
+		previousBitWidth = bitWidth;
     }
     verilogVariables += ";\n";
+	
+	int bitsrequired = (int)ceil(log2(_latency+2));
+	verilogVariables += "\n\tlocalparam [" + to_string(bitsrequired-1) + ":0]  Wait = 0,";
+
+	for (int ii = 0; ii < _latency;ii++)
+		verilogVariables += " S" + to_string(ii+1) + " = " + to_string(ii+1) + ",";
+
+	verilogVariables += " Final = " + to_string(_latency+1) + ";\n";
+
+	verilogVariables += "\n\treg [" + to_string(bitsrequired - 1) + ":0]  State = Wait;\n";
+
     
     cout << verilogVariables;
     
@@ -422,9 +506,32 @@ void Controller::getCriticalPath()
 
 bool Controller::PerformScheduling(int latency)
 {
+	_Schedule = new int[_operations.size()*latency];
+	_scheduleCount = new int[latency];
+
 	Circuit circuit;
-	bool ret = circuit.ForceDirectedScheduling(_operations, latency);
+	bool ret = circuit.ForceDirectedScheduling(_operations, latency,_Schedule, _scheduleCount);
+
+	if (ret) {
+		cout << endl << "Force Directed Schedule" << endl;
+		for (int yy = 0; yy < latency; yy++)
+		{
+			cout << "Time " << yy + 1 << " :\tCount = " << _scheduleCount[yy] << " :\tNodes :\t";
+			for (int xx = 0; xx < _scheduleCount[yy]; xx++)
+			{
+				cout << _Schedule[yy*_operations.size() + xx] << "  ";
+			}
+			cout << endl;
+		}
+	}
+	else
+	{
+		printf("\nError occurred during force directed scheduling\n");
+	}
+
+
 	return ret;
+
 }
 
 

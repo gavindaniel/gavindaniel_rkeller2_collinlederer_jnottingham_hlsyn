@@ -67,6 +67,7 @@ public:
     void addCondition(Operation newIf);
     Node getVariable() { return _a; };
     void setVariable(Node var) { _a = var; };
+	vector<Operation> getOperations() { return _operations; };
 };
 #endif
 

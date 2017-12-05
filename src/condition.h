@@ -30,6 +30,7 @@ public:
     void setVariable (Node var) { _var = var; };
     void addOperation(Operation newOp) { _operations.push_back(newOp); };
     void addCondition(Condition newIf) { _ifstatements.push_back(newIf); };
+	
 };
 #endif
 
