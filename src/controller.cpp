@@ -455,7 +455,7 @@ string Controller::writeVariables() {
 		previousBitWidth = bitWidth;
     }
     verilogVariables += ";\n";
-	
+	/*
 	int bitsrequired = (int)ceil(log2(_latency+2));
 	verilogVariables += "\n\tlocalparam [" + to_string(bitsrequired-1) + ":0]  Wait = 0,";
 
@@ -468,8 +468,9 @@ string Controller::writeVariables() {
 
     
     cout << verilogVariables;
-    
+    */
     return verilogVariables;
+     
 }
 /*
  * Description: loops through the list of Operations and tries to convert each Operation

@@ -99,6 +99,8 @@ public:
 	void getSuccessorForce(vector<Operation> _operations, int latency);
 	void getTotalForce(vector<Operation> _operations, int latency);
 	void Initialize(vector<Operation> _operations, int latency);
+    void addParent(vector<Operation> _operations, int addTo, int add, int* node);
+    void fixChildNodes(vector<Operation> _operations, int latency);
 };
 #endif
 
