@@ -101,6 +101,7 @@ public:
 	void Initialize(vector<Operation> _operations, int latency);
     void addParent(vector<Operation> _operations, int addTo, int add, int* node);
     void fixChildNodes(vector<Operation> _operations, int latency);
+    void getAncestorNodes(vector<Operation> _operations);
 };
 #endif
 

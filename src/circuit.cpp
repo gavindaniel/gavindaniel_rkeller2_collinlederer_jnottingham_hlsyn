@@ -46,8 +46,10 @@ bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency
     getChildNodes(_operations);
     getDescendantNodes(_operations);
     getParentNodes(_operations);
+    getAncestorNodes(_operations);
     fixChildNodes(_operations, latency);
     getDescendantNodes(_operations);
+    getAncestorNodes(_operations);
     
     //Sorts each node into multiply, divide/modulo, adder/subtractor, logic elements
     SortNodes(_operations);
@@ -1064,8 +1066,7 @@ void Circuit::fixChildNodes(vector<Operation> _operations, int latency)
     }
     for(x=0;x<_operations.size();x++)
     {
-        if(x==2)
-            x = 2;
+
         int node_count = 0;
         for(y=0;y<_operations.size();y++)
         {
@@ -1084,7 +1085,7 @@ void Circuit::fixChildNodes(vector<Operation> _operations, int latency)
         _childCount[x] = node_count;
     }
 #ifdef DEBUG_MODE
-    cout << endl << "Child Nodes" << endl;
+    cout << endl << "Fix Child Nodes" << endl;
     for (int yy = 0; yy < _operations.size(); yy++)
     {
         cout << "Operation " << yy << " :\tCount = " << _childCount[yy] << " :\tChild Nodes :\t";
@@ -1098,6 +1099,7 @@ void Circuit::fixChildNodes(vector<Operation> _operations, int latency)
 }
 void Circuit::getDescendantNodes(vector<Operation> _operations)
 {
+    cout << "/nStarting Get Descendant" << endl;
     bool end = false;
     for (int ii = 0; ii < numOps*Width; ii++) {
         _DescendantNodes[ii] = _ChildNodes[ii];
@@ -1136,7 +1138,18 @@ void Circuit::getDescendantNodes(vector<Operation> _operations)
         if (notdone == true)
             end = true;
     }
-    
+#ifdef DEBUG_MODE
+    cout << endl << "Child Nodes" << endl;
+    for (int yy = 0; yy < _operations.size(); yy++)
+    {
+        cout << "Operation " << yy << " :\tCount = " << _childCount[yy] << " :\tChild Nodes :\t";
+        for (int xx = 0; xx < _childCount[yy]; xx++)
+        {
+            cout << _ChildNodes[yy*(numOps - 1) + xx] << "  ";
+        }
+        cout << endl;
+    }
+#endif
 #ifdef DEBUG_MODE
     cout << endl << "Descandant Nodes" << endl;
     for (int yy = 0; yy < _operations.size(); yy++)
@@ -1191,6 +1204,8 @@ void Circuit::addParent(vector<Operation> _ops, int addTo, int add, int* node){
     }
     else
     {
+        _ParentNodes[add*Width+ _parentCount[add]] = _ParentNodes[addTo*Width+x];
+        _parentCount[add]++;
         _ParentNodes[addTo*Width + x] = add;
     }
 }
@@ -1284,7 +1299,9 @@ void Circuit::getParentNodes(vector<Operation> _operations)
         _parentCount[ii] = node_count;
         
     }
-    
+}
+void Circuit::getAncestorNodes(vector<Operation> _operations){
+    cout << "/nStarting Get Ancestor Nodes" << endl;
     bool end = false;
     for (int ii = 0; ii < numOps*Width; ii++){
         _AncestorNodes[ii] = _ParentNodes[ii];
@@ -1340,29 +1357,7 @@ void Circuit::getParentNodes(vector<Operation> _operations)
             }
         }
     }
-#ifdef DEBUG_MODE
-    cout << endl << "Child Nodes" << endl;
-    for (int yy = 0; yy < _operations.size(); yy++)
-    {
-        cout << "Operation " << yy << " :\tCount = " << _childCount[yy] << " :\tChild Nodes :\t";
-        for (int xx = 0; xx < _childCount[yy]; xx++)
-        {
-            cout << _ChildNodes[yy*(numOps - 1) + xx] << "  ";
-        }
-        cout << endl;
-    }
-    
-    cout << endl << "Descandant Nodes" << endl;
-    for (int yy = 0; yy < _operations.size(); yy++)
-    {
-        cout << "Operation " << yy << " :\tCount = " << _descendantCount[yy] << " :\tDescendant Nodes :\t";
-        for (int xx = 0; xx < _descendantCount[yy]; xx++)
-        {
-            cout << _DescendantNodes[yy*(numOps - 1) + xx] << "  ";
-        }
-        cout << endl;
-    }
-#endif
+
 #ifdef DEBUG_MODE
     cout << endl << "Parent Nodes" << endl;
     for (int yy = 0; yy < _operations.size(); yy++)
@@ -1378,7 +1373,7 @@ void Circuit::getParentNodes(vector<Operation> _operations)
     cout << endl << "Ancestor Nodes" << endl;
     for (int yy = 0; yy < _operations.size(); yy++)
     {
-        cout << "Operation " << yy << " :\tCount = " << _ancestorCount[yy] << " :\Ancestor Nodes :\t";
+        cout << "Operation " << yy << " :\tCount = " << _ancestorCount[yy] << " :\tAncestor Nodes :\t";
         for (int xx = 0; xx < _ancestorCount[yy]; xx++)
         {
             cout << _AncestorNodes[yy*(numOps - 1) + xx] << "  ";
