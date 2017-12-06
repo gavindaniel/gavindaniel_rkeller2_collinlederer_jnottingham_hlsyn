@@ -41,38 +41,6 @@ bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency
 {
     //Initialize parameters and allocate arrays
     Initialize(_operations, latency);
-
-#ifdef DEBUG_MODE
-	for (int ii = 0; ii < numOps;ii++){
-		Operation Operator = _operations[ii];
-		string op = _operations[ii].getOperator();
-		string out = _operations[ii].getResult().getVariableName();
-		string a = _operations[ii].get_varA().getVariableName();
-		string b = _operations[ii].get_varB().getVariableName();
-		string c = _operations[ii].get_varC().getVariableName();
-		if (op != "{") cout << "Node = " << ii << "\t" << out << " = " << a << " " << op << " " << b << endl;
-		else
-		{
-			int numIfOperations = Operator.getOperations().size();
-			vector<Operation> IfOps = Operator.getOperations();
-
-			cout << "if ( " << a << " ){ " << endl;
-			for (int yy = 0; yy < numIfOperations; yy++) {
-				string If_Out = IfOps[yy].getResult().getVariableName();
-				string If_a = IfOps[yy].get_varA().getVariableName();
-				string If_b = IfOps[yy].get_varB().getVariableName();
-				string If_op = IfOps[yy].getOperator();
-				
-
-
-				cout << "\t" << If_Out << " = " << If_a << " " << If_op << " " << If_b << ";" << endl;
-			}
-			cout << "}" << endl;
-			
-		}
-
-	}
-#endif
     
     //Finds child and parent nodes for each node
     getChildNodes(_operations);
@@ -80,6 +48,7 @@ bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency
     getParentNodes(_operations);
     getAncestorNodes(_operations);
     fixChildNodes(_operations, latency);
+
     getDescendantNodes(_operations);
     getAncestorNodes(_operations);
     
@@ -123,38 +92,6 @@ bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency
 
 	for (int ii = 0; ii < latency;ii++)
 		_ScheduleCount[ii] = scheduleCount[ii];
-
-
-#ifdef DEBUG_MODE
-	for (int ii = 0; ii < numOps; ii++) {
-		Operation Operator = _operations[ii];
-		string op = _operations[ii].getOperator();
-		string out = _operations[ii].getResult().getVariableName();
-		string a = _operations[ii].get_varA().getVariableName();
-		string b = _operations[ii].get_varB().getVariableName();
-		string c = _operations[ii].get_varC().getVariableName();
-		if (op != "{") cout << "Node = " << ii << "\t" << out << " = " << a << " " << op << " " << b << endl;
-		else
-		{
-			int numIfOperations = Operator.getOperations().size();
-			vector<Operation> IfOps = Operator.getOperations();
-
-			cout << "if ( " << a << " ){ " << endl;
-			for (int yy = 0; yy < numIfOperations; yy++) {
-				string If_Out = IfOps[yy].getResult().getVariableName();
-				string If_a = IfOps[yy].get_varA().getVariableName();
-				string If_b = IfOps[yy].get_varB().getVariableName();
-				string If_op = IfOps[yy].getOperator();
-
-
-				cout << "\t" << If_Out << " = " << If_a << " " << If_op << " " << If_b << ";" << endl;
-			}
-			cout << "}" << endl;
-
-		}
-
-	}
-#endif
     
     return true;
     
@@ -856,11 +793,11 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
     //Loop through every operation
     for (int ii = 0; ii < latency; ii++)
     {
-		for (int yy = 0; yy < _operations.size(); yy++)
-			if (EndTime[yy] == ii) OpDone[yy] = true;
+        for (int yy = 0; yy < _operations.size(); yy++){
+            if (EndTime[yy] == ii) OpDone[yy] = true;
+        }
         for (int yy = 0; yy < _operations.size(); yy++)
         {
-            //if (EndTime[yy] == ii) OpDone[yy] = true;
             if (!OpDone[yy] && StartTime[yy] == -1)
             {
                 if (_parentCount[yy] == 0)
@@ -902,7 +839,7 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
         if (EndTime[ii] == latency) OpDone[ii] = true;
         if (!OpDone[ii]) {
             printf("\nError: operation %d could not be scheduled/completed within latency constraint.\n", ii);
-			exit(0);
+            exit(0);
         }
     }
     
@@ -925,7 +862,7 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
     delete[] StartTime;
     delete[] EndTime;
     delete[] OpDone;
-    
+    return;
 }
 
 
@@ -1232,7 +1169,9 @@ void Circuit::getDescendantNodes(vector<Operation> _operations)
 void Circuit::addParent(vector<Operation> _ops, int addTo, int add, int* node){
     bool duplicate = false;
     bool handle_if = false;
-    int x = 0;
+    bool dont_add = false;
+    int x = 0, y = 0;
+    int secondMux;
     for(x = 0;x<(*node);x++)
     {
         if(_ops.at(_ParentNodes[addTo*Width+x]).getResult().getVariableName() == _ops.at(add).getResult().getVariableName())
@@ -1245,19 +1184,68 @@ void Circuit::addParent(vector<Operation> _ops, int addTo, int add, int* node){
         }
         if(_ops.at(_ParentNodes[addTo*Width+x]).getOperator() == "{")
         {
-            for(int y = 0;y < _ops.at(_ParentNodes[addTo*Width+x]).getOperations().size();y++)
+            for(y = 0;y < _ops.at(_ParentNodes[addTo*Width+x]).getOperations().size();y++)
             {
                 if(_ops.at(add).getResult().getVariableName() == _ops.at(_ParentNodes[addTo*Width+x]).getOperations().at(y).getResult().getVariableName() )
                 {
                     handle_if = true;
                     break;
                 }
+                /*if(_ops.at(addTo).getOperations().at(y).getOperator() == "{"){
+                    for(int pls_help=0;pls_help<_ops.at(addTo).getOperations().at(y).getOperations().size();pls_help++){
+                    if(_ops.at(add).getResult().getVariableName()==_ops.at(addTo).getOperations().at(y).getOperations().at(pls_help).getResult().getVariableName())
+                    {
+                        dont_add = true;
+                        break;
+                    }
+                        }
+                    }*/
+                if(dont_add == true){
+                    break;
+                }
             }
+            
         }
         if( handle_if == true)
             break;
     }
-    if(duplicate == false)
+    if(_ops.at(addTo).getOperator() == "{")
+    {
+        for(y = 0;y < _ops.at(addTo).getOperations().size();y++)
+        {
+            if(_ops.at(addTo).getOperations().at(y).getOperator() == "{"){
+                for(int pls_help=0;pls_help<_ops.at(addTo).getOperations().at(y).getOperations().size();pls_help++){
+                    if(_ops.at(add).getResult().getVariableName()==_ops.at(addTo).getOperations().at(y).getOperations().at(pls_help).getResult().getVariableName())
+                    {
+                        for(int pls = 0;pls<_ops.size();pls++){
+                            if(_ops.at(pls).get_varA().getVariableName()==_ops.at(addTo).getOperations().at(y).get_varA().getVariableName()){
+                                secondMux = pls;
+                            }
+                        }
+                        dont_add = true;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+    if(dont_add == true){
+        for(x = 0;x<(*node);x++)
+        {
+            if(_ops.at(_ParentNodes[addTo*Width+x]).get_varA().getVariableName() == _ops.at(secondMux).get_varA().getVariableName())
+            {
+
+                    duplicate = true;
+                    break;
+
+            }
+        }
+        if(duplicate == false){
+        _ParentNodes[addTo*Width+*node] = secondMux;
+        (*node)++;
+        }
+    }
+    else if(duplicate == false && dont_add == false)
     {
         if(handle_if == true)
         {
@@ -1270,15 +1258,17 @@ void Circuit::addParent(vector<Operation> _ops, int addTo, int add, int* node){
     }
     else
     {
+        if(duplicate == false){
         _ParentNodes[add*Width+ _parentCount[add]] = _ParentNodes[addTo*Width+x];
         _parentCount[add]++;
         _ParentNodes[addTo*Width + x] = add;
+        }
     }
 }
 
 void Circuit::getParentNodes(vector<Operation> _operations)
 {
-    
+    bool duplicate;
     Operation operation;
     
     string A, B, C, R, D1;
@@ -1299,7 +1289,7 @@ void Circuit::getParentNodes(vector<Operation> _operations)
         
         
         //Look for all instances of outputVar further below vertex ii
-        for (unsigned int xx = 0; xx < _operations.size(); xx++)
+        for (int xx = 0; xx < _operations.size(); xx++)
         {
             if (xx != ii)
             {
@@ -1329,6 +1319,12 @@ void Circuit::getParentNodes(vector<Operation> _operations)
                     }
                     if(mux_op == false)
                     {
+                        duplicate = false;
+                        for (int duplicate_check = 0;duplicate_check < node_count;duplicate_check++)
+                        {
+                            if(_ParentNodes[ii*Width+duplicate_check] == xx){ duplicate = true;};
+                        }
+                        if(duplicate == false)
                         addParent(_operations, ii, xx, &node_count);
                         //_ParentNodes[ii*Width + node_count] = xx;
                         //node_count++;
@@ -1336,7 +1332,7 @@ void Circuit::getParentNodes(vector<Operation> _operations)
                     else
                     {
                         int temp = _ChildNodes[xx*Width+child_counter];
-                        bool duplicate = false;
+                        duplicate = false;
                         for (int duplicate_check = 0;duplicate_check < node_count;duplicate_check++)
                         {
                             if(_ParentNodes[ii*Width+duplicate_check] == temp){ duplicate = true;};
@@ -1350,10 +1346,20 @@ void Circuit::getParentNodes(vector<Operation> _operations)
                 }
                 for (int if_parent = 0; if_parent < _operations.at(ii).getOperations().size();if_parent++)
                 {
-                    D1 = _operations.at(ii).getOperations().at(if_parent).getResult().getVariableName();
-                    if (R != "" && (R == D1) && xx - _operations.at(ii).getOperations().size() <= ii)
+                    if(ii==5)
                     {
-                        addParent(_operations, ii, xx, &node_count);
+                    }
+                    D1 = _operations.at(ii).getOperations().at(if_parent).getResult().getVariableName();
+                    int temp = xx - _operations.at(ii).getOperations().size();
+                    if (R != "" && (R == D1) && temp <= (int)ii)
+                    {
+                        duplicate = false;
+                        for (int duplicate_check = 0;duplicate_check < node_count;duplicate_check++)
+                        {
+                            if(_ParentNodes[ii*Width+duplicate_check] == xx){ duplicate = true;};
+                        }
+                        if(duplicate == false)
+                            addParent(_operations, ii, xx, &node_count);
                         //_ParentNodes[ii*Width + node_count] = xx;
                         //node_count++;
                     }

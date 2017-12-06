@@ -13,7 +13,7 @@
 #include "input.h"
 #include "node.h"
 #include "circuit.h"
-#include <math.h>;
+#include <math.h>
 
 using namespace std;
 
@@ -58,6 +58,7 @@ bool Controller::readFromFile() {
 	Operation tempOperation;
 	Operation temp;
 	Operation tempCondition;
+    Operation backupTemp;
 	vector<Operation> parentConditions;
 	int num_if_statement_open = 0;
 
@@ -79,23 +80,10 @@ bool Controller::readFromFile() {
 			if (newInput.checkOperation(lineBuffer)) {
 				tempOperation = parseOperation(lineBuffer);
 				if (tempOperation.getOperator() == "z") {
+                    cout << "First return false"<<endl;
 					return false;
 				}
 				if (num_if_statement_open > 0) { //this operation is inside an if statement
-					for (Operation op : _operations) {
-						string opResult = op.getResult().getVariableName();
-						string tempResult = tempOperation.getResult().getVariableName();
-						if (opResult == tempResult) {
-							string DummyName = "Dummy_" + to_string(dummyCount);
-							OriginalNames.push_back(opResult);
-							dummyCount++;
-							Node r;
-							r.setVariableName(DummyName);
-							tempOperation.setResult(r);
-							
-							VarNames.push_back(DummyName);
-						}
-					}
 					tempCondition.addOperation(tempOperation);
 				}
 				else
@@ -109,7 +97,9 @@ bool Controller::readFromFile() {
 					tempCondition = parseIfStatement(lineBuffer);
 				}
 				if (tempCondition.getVariable().getVariableName() == "") {
-					return false;
+                    tempCondition = backupTemp;
+                    cout << "Return back to if statement"<<endl;
+					//return false;
 				}
 				num_if_statement_open++;
 
@@ -119,12 +109,24 @@ bool Controller::readFromFile() {
 					parentConditions.back().addOperation(tempCondition);
 					tempCondition = parentConditions.back();
 					parentConditions.pop_back();
+                    if(num_if_statement_open>1){
+                        for(int help = 0;help<tempCondition.getOperations().size();help++){
+                            if(tempCondition.getOperations().at(help).getOperator() == "{")
+                            {
+                                for(int help2=0;help2<tempCondition.getOperations().at(help).getOperations().size();help2++)
+                                {
+                                    _operations.push_back(tempCondition.getOperations().at(help).getOperations().at(help2));
+                                }
+                            }
+                        }
+                    }
 				}
 				else { // no parent if statements
 					_operations.push_back(tempCondition);
 					for (int if_counter = 0; if_counter < tempCondition.getOperations().size(); if_counter++)
-						_operations.push_back(tempCondition.getOperations().at(0));
-					tempCondition = Operation();
+						_operations.push_back(tempCondition.getOperations().at(if_counter));
+                    backupTemp = tempCondition;
+                    tempCondition = Operation();
 				}
 				num_if_statement_open--;
 			}
@@ -139,7 +141,7 @@ bool Controller::readFromFile() {
  */
 
 void Controller::addNodes(Input inp) {
-	string content = inp.getContent();
+    
     for (unsigned int i = 0; i < inp.getVariables().size(); i++) {
         Node newNode = Node(inp.getContent(), inp.getVariables().at(i), inp.getSize(), inp.getType(), inp.getSigned());
         _variables.push_back(newNode);
@@ -176,10 +178,6 @@ Operation Controller::parseIfStatement(string netlistCode) {
     newCondition.setOperator("{");
     return newCondition;
 }
-
-
-
-
 /*
  * Description: Parse netlistCode for an operation and convert it into an Operation (object)
  */
@@ -312,7 +310,6 @@ Node Controller::findVariable(string varName) {
 }
 
 
-
 /*
  * Description: Writes to the Output File
  */
@@ -322,7 +319,7 @@ void Controller::writeToFile() {
     if (!outputFile.is_open()) {
         cout << "Error opening output file " << _outputFilePath << endl;
     }
-
+    
     outputFile << writeModule() << "\r\n";
     outputFile << writeVariables() << "\r\n";
 	outputFile << writeStateMachine() << "\r\n";
@@ -330,6 +327,7 @@ void Controller::writeToFile() {
     
     for(string line : _verilogLines){
         outputFile << "\t" << line << "\r\n";
+        cout << "\t" << line << "\r\n";
     }
     outputFile << "endmodule";
     
@@ -379,26 +377,11 @@ string Controller::writeStateMachine() {
 
 			int CurrentNode = _Schedule[(ii-1)*_operations.size() + xx];
 			Operation CurrentOp = _operations[CurrentNode];
-			if (CurrentOp.getOperator()  != "{"){
+			if (CurrentOp.get_varC().getVariableName() == "")
 				StateMachine += "\t\t\t\t\t" + CurrentOp.getResult().getVariableName() + " <= " + CurrentOp.get_varA().getVariableName() + " " + CurrentOp.getOperator() + " " + CurrentOp.get_varB().getVariableName() + ";\n";
-			}
-			else{
-				int numIfOperations = CurrentOp.getOperations().size();
-				string a = CurrentOp.get_varA().getVariableName();
-				string out = CurrentOp.getResult().getVariableName();
-				vector<Operation> IfOps = CurrentOp.getOperations();
-				for (int yy = 0; yy < numIfOperations; yy++) {
-					string If_Out = IfOps[yy].getResult().getVariableName();
-					string If_a = IfOps[yy].get_varA().getVariableName();
-					string If_b = IfOps[yy].get_varB().getVariableName();
-					string If_op = IfOps[yy].getOperator();
+			else
+				StateMachine += "\t\t\t\t\t" + CurrentOp.getResult().getVariableName() + " <= " + CurrentOp.get_varA().getVariableName() + " ? " + CurrentOp.get_varB().getVariableName() + " : " + CurrentOp.get_varC().getVariableName() + ";\n";
 
-					StateMachine += "\t\t\t\t\t" + OriginalNames[OriginalNameCount] + " = " + If_a + " ? " + If_b + " : " + If_Out + ";\n";
-					OriginalNameCount++;
-					//cout << "\t" << If_Out << " = " << If_a << " " << If_op << " " << If_b << ";" << endl;
-				}
-				//StateMachine += "\t\t\t\t\t" + CurrentOp.getResult().getVariableName() + " <= " + CurrentOp.get_varA().getVariableName() + " ? " + CurrentOp.get_varB().getVariableName() + " : " + CurrentOp.get_varC().getVariableName() + ";\n";
-			}
 		}
 		if (ii != _latency)
 			StateMachine += "\t\t\t\t\t State = S" + to_string(ii + 1) + ";\n";
@@ -437,7 +420,7 @@ string Controller::writeModule() {
     }
     moduleDef += ");\n";
     
-  //  cout << moduleDef;
+    cout << moduleDef;
     
     return moduleDef;
 }
@@ -488,9 +471,6 @@ string Controller::writeVariables() {
 		previousType = type;
 		previousBitWidth = bitWidth;
     }
-	for (int ii = 0; ii < VarNames.size(); ii++) {
-		verilogVariables += ", " + VarNames[ii];
-	}
     verilogVariables += ";\n";
 	
 	int bitsrequired = (int)ceil(log2(_latency+2));
@@ -504,7 +484,7 @@ string Controller::writeVariables() {
 	verilogVariables += "\n\treg [" + to_string(bitsrequired - 1) + ":0]  State = Wait;\n";
 
     
-  //  cout << verilogVariables;
+    cout << verilogVariables;
     
     return verilogVariables;
      
