@@ -9,7 +9,7 @@
 #define CIRCUIT_H
 
 #ifndef DEBUG_MODE
-#define DEBUG_MODE
+//#define DEBUG_MODE
 #endif
 
 #include <fstream>

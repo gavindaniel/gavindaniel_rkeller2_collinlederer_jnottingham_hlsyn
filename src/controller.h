@@ -37,7 +37,10 @@ public:
     vector<Operation> getOperations();
     vector<Node> getVariables();
     vector<string> getVerilogLines();
-    
+	vector<string> VarNames;
+	vector<string> OriginalNames;
+	int dummyCount = 0;
+	int OriginalNameCount = 0;
     bool readFromFile();
     bool convertOperations();
     void ProcessInputFile();
@@ -54,6 +57,8 @@ public:
     void getCriticalPath();
 	bool PerformScheduling(int latency);
     string checkForTabs(string netlistCode);
+
+	
 };
 
 

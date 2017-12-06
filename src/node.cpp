@@ -34,6 +34,8 @@ string Node::getVariableName() {
     return _name;
 }
 
+void Node::setVariableName(string name) { _name = name; };
+
 int Node::getBitWidth() {
     return _bitWidth;
 }

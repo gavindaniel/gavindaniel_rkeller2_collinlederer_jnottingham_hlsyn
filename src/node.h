@@ -40,6 +40,7 @@ public:
     bool checkOperation(string netlistCode);
     string checkType(string netlistCode);
     string checkSize(string netlistCode);
+	void setVariableName(string name);
 };
 #endif
 

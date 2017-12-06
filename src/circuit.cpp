@@ -41,6 +41,38 @@ bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency
 {
     //Initialize parameters and allocate arrays
     Initialize(_operations, latency);
+
+#ifdef DEBUG_MODE
+	for (int ii = 0; ii < numOps;ii++){
+		Operation Operator = _operations[ii];
+		string op = _operations[ii].getOperator();
+		string out = _operations[ii].getResult().getVariableName();
+		string a = _operations[ii].get_varA().getVariableName();
+		string b = _operations[ii].get_varB().getVariableName();
+		string c = _operations[ii].get_varC().getVariableName();
+		if (op != "{") cout << "Node = " << ii << "\t" << out << " = " << a << " " << op << " " << b << endl;
+		else
+		{
+			int numIfOperations = Operator.getOperations().size();
+			vector<Operation> IfOps = Operator.getOperations();
+
+			cout << "if ( " << a << " ){ " << endl;
+			for (int yy = 0; yy < numIfOperations; yy++) {
+				string If_Out = IfOps[yy].getResult().getVariableName();
+				string If_a = IfOps[yy].get_varA().getVariableName();
+				string If_b = IfOps[yy].get_varB().getVariableName();
+				string If_op = IfOps[yy].getOperator();
+				
+
+
+				cout << "\t" << If_Out << " = " << If_a << " " << If_op << " " << If_b << ";" << endl;
+			}
+			cout << "}" << endl;
+			
+		}
+
+	}
+#endif
     
     //Finds child and parent nodes for each node
     getChildNodes(_operations);
@@ -91,6 +123,38 @@ bool Circuit::ForceDirectedScheduling(vector<Operation> _operations, int latency
 
 	for (int ii = 0; ii < latency;ii++)
 		_ScheduleCount[ii] = scheduleCount[ii];
+
+
+#ifdef DEBUG_MODE
+	for (int ii = 0; ii < numOps; ii++) {
+		Operation Operator = _operations[ii];
+		string op = _operations[ii].getOperator();
+		string out = _operations[ii].getResult().getVariableName();
+		string a = _operations[ii].get_varA().getVariableName();
+		string b = _operations[ii].get_varB().getVariableName();
+		string c = _operations[ii].get_varC().getVariableName();
+		if (op != "{") cout << "Node = " << ii << "\t" << out << " = " << a << " " << op << " " << b << endl;
+		else
+		{
+			int numIfOperations = Operator.getOperations().size();
+			vector<Operation> IfOps = Operator.getOperations();
+
+			cout << "if ( " << a << " ){ " << endl;
+			for (int yy = 0; yy < numIfOperations; yy++) {
+				string If_Out = IfOps[yy].getResult().getVariableName();
+				string If_a = IfOps[yy].get_varA().getVariableName();
+				string If_b = IfOps[yy].get_varB().getVariableName();
+				string If_op = IfOps[yy].getOperator();
+
+
+				cout << "\t" << If_Out << " = " << If_a << " " << If_op << " " << If_b << ";" << endl;
+			}
+			cout << "}" << endl;
+
+		}
+
+	}
+#endif
     
     return true;
     
@@ -792,9 +856,11 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
     //Loop through every operation
     for (int ii = 0; ii < latency; ii++)
     {
+		for (int yy = 0; yy < _operations.size(); yy++)
+			if (EndTime[yy] == ii) OpDone[yy] = true;
         for (int yy = 0; yy < _operations.size(); yy++)
         {
-            if (EndTime[yy] == ii) OpDone[yy] = true;
+            //if (EndTime[yy] == ii) OpDone[yy] = true;
             if (!OpDone[yy] && StartTime[yy] == -1)
             {
                 if (_parentCount[yy] == 0)
@@ -836,7 +902,7 @@ void Circuit::getASAP(vector<Operation> _operations,int latency)
         if (EndTime[ii] == latency) OpDone[ii] = true;
         if (!OpDone[ii]) {
             printf("\nError: operation %d could not be scheduled/completed within latency constraint.\n", ii);
-            throw ;
+			exit(0);
         }
     }
     
